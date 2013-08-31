@@ -1,3 +1,6 @@
+# from Ryan Olson
+# https://github.com/ryanolson/schematics
+#
 """
 Tools for generating forms based on Schematics Models
 """
@@ -56,9 +59,11 @@ class ModelConverter(object):
         self.converters = converters
 
     def convert(self, model, field, field_name, field_args, hidden=False):
+        from pprint import pprint
+        #pprint(vars(field))
         kwargs = {
-            'label': getattr(field, 'form_name', field_name),
-            'description': '',
+            'label': getattr(field, 'serialized_name', field_name),
+            'description': '' , 
             'validators': [],
             'filters': [],
             'default': field.default,
@@ -79,7 +84,10 @@ class ModelConverter(object):
            kwargs['validators'].append(validators.Optional())
 
         if field.choices:
-           choices = [(x,x) for x in field.choices]
+           if type(field.choices) == type( dict()): # [XXX] know there's a better way
+               choices = [(x,field.choices[x]) for x in field.choices.iterkeys()]
+           else:
+                choices = [(x,x) for x in field.choices]
            kwargs['choices'] = choices
            if kwargs.pop('multiple', False):
                return f.SelectMultipleField(**kwargs)
@@ -118,8 +126,9 @@ class ModelConverter(object):
         if 'textarea' in kwargs:
             if kwargs.pop('textarea'):
                 return f.TextAreaField(**kwargs)
-        return f.StringField(**kwargs)
-        #eturn f.TextAreaField(**kwargs)
+        if field.max_length:
+            return f.StringField(**kwargs)
+        return f.TextAreaField(**kwargs)
 
     @converts('URLType')
     def conv_URL(self, model, field, kwargs):
@@ -182,7 +191,7 @@ class ModelConverter(object):
     @converts('ListType')
     def conv_List(self, model, field, kwargs):
         if isinstance(field.field, ReferenceField):
-            return ModelSelectMultipleField(model=field.field.document_type, **kwargs)
+            return ModelSelectMultipleField(model=field.field.model_class, **kwargs)
         if field.field.choices:
             kwargs['multiple'] = True
             return self.convert(model, field.field, kwargs)
@@ -209,12 +218,12 @@ class ModelConverter(object):
             'validators': [],
             'filters': [],
         }
-        form_class = model_form(field.document_type_obj, field_args={})
+        form_class = model_form(field.model_class, field_args={})
         return f.FormField(form_class, **kwargs)
 
     @converts('ReferenceField')
     def conv_Reference(self, model, field, kwargs):
-        return ModelSelectField(model=field.document_type, **kwargs)
+        return ModelSelectField(model=field.model_class, **kwargs)
 
     @converts('GenericReferenceField')
     def conv_GenericReference(self, model, field, kwargs):
