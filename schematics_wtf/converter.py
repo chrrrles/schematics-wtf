@@ -37,7 +37,7 @@ def time_format(time_format):
   message = 'Time string must match {}.'.format(time_format)
   def _format(form, field):
     if not isinstance(field.data, basestring):
-       raise ValidationError(message)
+      raise ValidationError(message)
     try:
       value = time.strptime(field.data, time_format)[3:5]
       value = datetime.time(*value)
@@ -71,36 +71,36 @@ class ModelConverter(object):
     }
 
     if hidden:
-       kwargs['widget'] = HiddenInput()
+      kwargs['widget'] = HiddenInput()
 
     if model._data[field_name]:
-       kwargs['default'] = model._data[field_name]
+      kwargs['default'] = model._data[field_name]
 
     if field_args:
-       kwargs.update(field_args)
+      kwargs.update(field_args)
 
     if field.required:
-       kwargs['validators'].append(validators.Required())
+      kwargs['validators'].append(validators.Required())
     else:
-       kwargs['validators'].append(validators.Optional())
+      kwargs['validators'].append(validators.Optional())
 
     if field.choices:
-       if type(field.choices) == type( dict()): # [XXX] know there's a better way
+      if type(field.choices) == type( dict()): # [XXX] know there's a better way
          choices = [(x,field.choices[x]) for x in field.choices.iterkeys()]
-       else:
+      else:
         choices = [(x,x) for x in field.choices]
-       kwargs['choices'] = choices
-       if kwargs.pop('multiple', False):
-         return f.SelectMultipleField(**kwargs)
-       return f.SelectField(**kwargs)
+      kwargs['choices'] = choices
+      if kwargs.pop('multiple', False):
+        return f.SelectMultipleField(**kwargs)
+      return f.SelectField(**kwargs)
 
     ftype = type(field).__name__
 
     if hasattr(field, 'to_form_field'):
-       return field.to_form_field(model, kwargs)
+      return field.to_form_field(model, kwargs)
 
     if ftype in self.converters:
-       return self.converters[ftype](model, field, kwargs)
+      return self.converters[ftype](model, field, kwargs)
 
   @classmethod
   def _string_common(cls, model, field, kwargs):
@@ -219,7 +219,8 @@ class ModelConverter(object):
       'validators': [],
       'filters': [],
     }
-    form_class = model_form(field, field_args={})
+
+    form_class = model_form(field.model_class, field_args={})
     return f.FormField(form_class, **kwargs)
 
   @converts('ReferenceField')
@@ -308,23 +309,21 @@ def model_fields(model, only=None, exclude=None, hidden=None, field_args=None, c
   field_dict = { }
 
   if only:
-     gottago = whitelist(*only)
+    gottago = whitelist(*only)
   elif exclude:
-     gottago = blacklist(*exclude)
+    gottago = blacklist(*exclude)
 
   for field_name, field in model._fields.items():
-     if gottago(field_name, None): continue
-     ishidden = False
-     if hidden:
+    if gottago(field_name, None): continue
+    ishidden = False
+    if hidden:
       if field_name in hidden: ishidden=True
       
-     form_field = converter.convert(model, field, field_name, field_args.get(field_name), hidden=ishidden)
+    form_field = converter.convert(model, field, field_name, field_args.get(field_name), hidden=ishidden)
       
-     if form_field is not None:
+    if form_field is not None:
       field_dict[field_name] = form_field
 
-  from pprint import pprint
-  #pprint(field_dict)
   return field_dict
 
 
@@ -357,7 +356,7 @@ def model_form(model, base_class=Form, only=None, exclude=None, hidden=None, fie
 #    field_args = model._data
   import inspect
   if inspect.isclass(model):
-     model = model()
+    model = model()
   field_dict = model_fields(model, only, exclude, hidden, field_args, converter)
   field_dict['model_class'] = model
   return type(model.__class__.__name__ + 'Form', (base_class,), field_dict)
